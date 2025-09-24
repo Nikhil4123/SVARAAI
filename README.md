@@ -118,12 +118,17 @@ src/
    npm install
    ```
 
-3. Start the development server:
+3. Create a `.env` file in the frontend directory with the following:
+   ```env
+   NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
+   ```
+
+4. Start the development server:
    ```bash
    npm run dev
    ```
 
-4. Open your browser to `http://localhost:3000`
+5. Open your browser to `http://localhost:3000`
 
 ## 🧪 Testing
 
@@ -178,6 +183,61 @@ Reusable components implemented:
 - JWT-based authentication
 - Protected routes with middleware
 - Environment variables for secrets
+- API URLs should be configured through environment variables in production
+
+### Security Best Practices
+
+1. Never commit sensitive files like `.env` to version control
+2. Always use strong, randomly generated secrets for JWT
+3. Use HTTPS in production
+4. Implement rate limiting for API endpoints
+5. Validate and sanitize all user inputs
+6. Keep dependencies up to date
+
+## 🚀 Deployment
+
+### Backend Deployment
+
+1. Set environment variables on your production server:
+   ```env
+   PORT=5000
+   MONGODB_URI=your_production_mongodb_connection_string
+   JWT_SECRET=your_production_jwt_secret
+   NODE_ENV=production
+   ```
+
+2. Build the backend:
+   ```bash
+   npm run build
+   ```
+
+3. Start the production server:
+   ```bash
+   npm start
+   ```
+
+### Frontend Deployment
+
+1. Set environment variables:
+   ```env
+   NEXT_PUBLIC_API_BASE_URL=https://your-production-api-url.com/api
+   ```
+
+2. Build the frontend:
+   ```bash
+   npm run build
+   ```
+
+3. Start the production server:
+   ```bash
+   npm start
+   ```
+
+### Hosting Recommendations
+
+- Backend: Deploy on platforms like Heroku, AWS, or DigitalOcean
+- Frontend: Deploy on Vercel (optimized for Next.js) or Netlify
+- Database: Use MongoDB Atlas for cloud MongoDB hosting
 
 ## 📈 Future Enhancements
 
