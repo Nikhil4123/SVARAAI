@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Production
+/build
+/dist
+/.next
+
+# Environment files
+.env*
+!.env.example
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS generated files
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Backend specific
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.local
+backend/.env.development.local
+backend/.env.test.local
+backend/.env.production.local
+
+# Frontend specific
+svara-ai-task-management/node_modules/
+svara-ai-task-management/.next/
+svara-ai-task-management/out/
+svara-ai-task-management/.env
+svara-ai-task-management/.env.local
+svara-ai-task-management/.env.development.local
+svara-ai-task-management/.env.test.local
+svara-ai-task-management/.env.production.local
+
+# Testing
+coverage/
+*.test.js
+*.spec.js
+
+# Temporary files
+*.tmp
+*.temp
