@@ -29,7 +29,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://nikhilsarak612w_db_user:Z0eOPfOPIPyX4sou@cluster0.sco6bhs.mongodb.net/svaraai?retryWrites=true&w=majority&appName=Cluster0')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/task-manager')
   .then(() => {
     console.log('Connected to MongoDB');
     app.listen(PORT, () => {
