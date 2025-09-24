@@ -65,7 +65,7 @@ class ApiService {
     return response.json();
   }
 
-  async createTask(task: any) {
+  async createTask(task: { title: string; description?: string; status?: string; priority?: string; deadline: string; projectId: string; assignee?: string; }) {
     const response = await fetch(`${API_BASE_URL}/tasks`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -74,7 +74,7 @@ class ApiService {
     return response.json();
   }
 
-  async updateTask(id: string, updates: any) {
+  async updateTask(id: string, updates: { title?: string; description?: string; status?: string; priority?: string; deadline?: string; projectId?: string; assignee?: string; }) {
     const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
       method: 'PUT',
       headers: this.getAuthHeaders(),
@@ -86,6 +86,30 @@ class ApiService {
   async deleteTask(id: string) {
     const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
       method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  // Task Assignment APIs
+  async assignTask(taskId: string, assigneeId: string) {
+    const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/assign`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ assignee: assigneeId }),
+    });
+    return response.json();
+  }
+
+  async getTasksByAssignee(assigneeId: string) {
+    const response = await fetch(`${API_BASE_URL}/tasks/assignee/${assigneeId}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return response.json();
+  }
+
+  async getUsers() {
+    const response = await fetch(`${API_BASE_URL}/users`, {
       headers: this.getAuthHeaders(),
     });
     return response.json();

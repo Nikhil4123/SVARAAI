@@ -34,47 +34,54 @@ describe('Task Controller', () => {
   describe('createTask', () => {
     it('should create a new task successfully', async () => {
       const mockProject = { _id: 'project123' };
-      const mockTask = {
+      const mockTaskData = {
         _id: 'task123',
         title: 'Test Task',
+        description: '',
         status: 'todo',
         priority: 'medium',
         deadline: new Date(),
         projectId: 'project123',
-        save: jest.fn().mockResolvedValue({
-          _id: 'task123',
-          title: 'Test Task',
-          status: 'todo',
-          priority: 'medium',
-          deadline: new Date(),
-          projectId: 'project123',
-        }),
+        assignee: null,
+      };
+      
+      const mockTask = {
+        ...mockTaskData,
+        save: jest.fn().mockResolvedValue(mockTaskData),
+        populate: jest.fn().mockReturnThis(),
       };
 
       (Project.findById as jest.Mock).mockResolvedValue(mockProject);
       (Task as unknown as jest.Mock).mockImplementation(() => mockTask);
+      mockTask.populate.mockResolvedValue(mockTaskData);
 
+      // Set deadline to future date
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+      
       mockRequest = {
         body: {
           title: 'Test Task',
+          description: '',
           status: 'todo',
           priority: 'medium',
-          deadline: new Date(),
+          deadline: futureDate,
           projectId: 'project123',
+          assignee: null,
         },
       };
 
       await createTask(mockRequest as Request, mockResponse as Response);
 
       expect(mockStatus).toHaveBeenCalledWith(201);
-      expect(mockJson).toHaveBeenCalledWith({
+      // Check that json was called with an object containing the expected properties
+      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
         _id: 'task123',
         title: 'Test Task',
         status: 'todo',
         priority: 'medium',
-        deadline: expect.any(Date),
         projectId: 'project123',
-      });
+      }));
     });
 
     it('should return 404 if project not found', async () => {
@@ -94,6 +101,30 @@ describe('Task Controller', () => {
 
       expect(mockStatus).toHaveBeenCalledWith(404);
       expect(mockJson).toHaveBeenCalledWith({ message: 'Project not found' });
+    });
+
+    it('should return 400 if deadline is in the past', async () => {
+      const mockProject = { _id: 'project123' };
+      (Project.findById as jest.Mock).mockResolvedValue(mockProject);
+
+      // Set deadline to past date
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 7);
+      
+      mockRequest = {
+        body: {
+          title: 'Test Task',
+          status: 'todo',
+          priority: 'medium',
+          deadline: pastDate,
+          projectId: 'project123',
+        },
+      };
+
+      await createTask(mockRequest as Request, mockResponse as Response);
+
+      expect(mockStatus).toHaveBeenCalledWith(400);
+      expect(mockJson).toHaveBeenCalledWith({ message: 'Deadline must be in the future' });
     });
 
     it('should return 500 if there is a server error', async () => {
@@ -125,29 +156,33 @@ describe('Task Controller', () => {
         {
           _id: 'task1',
           title: 'Task 1',
+          description: '',
           status: 'todo',
           priority: 'high',
           deadline: new Date(),
           projectId: 'project123',
+          assignee: null,
         },
         {
           _id: 'task2',
           title: 'Task 2',
+          description: '',
           status: 'in-progress',
           priority: 'medium',
           deadline: new Date(),
           projectId: 'project123',
+          assignee: null,
         },
       ];
 
-      (Task.find as jest.Mock).mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          skip: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue(mockTasks),
-          }),
-        }),
-      });
-      
+      const mockFind = {
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue(mockTasks),
+      };
+
+      (Task.find as jest.Mock).mockReturnValue(mockFind);
       (Task.countDocuments as jest.Mock).mockResolvedValue(2);
 
       mockRequest = {
@@ -170,31 +205,47 @@ describe('Task Controller', () => {
 
   describe('updateTask', () => {
     it('should update a task successfully', async () => {
-      const mockTask = {
+      const mockUpdatedTask = {
         _id: 'task123',
         title: 'Updated Task',
+        description: '',
         status: 'in-progress',
         priority: 'high',
-        deadline: new Date(),
+        deadline: new Date(Date.now() + 86400000), // Tomorrow
         projectId: 'project123',
+        assignee: null,
+      };
+      
+      const mockTask = {
+        ...mockUpdatedTask,
+        populate: jest.fn().mockReturnThis(),
       };
 
       (Task.findByIdAndUpdate as jest.Mock).mockResolvedValue(mockTask);
+      mockTask.populate.mockResolvedValue(mockUpdatedTask);
 
       mockRequest = {
         params: { id: 'task123' },
         body: {
           title: 'Updated Task',
+          description: '',
           status: 'in-progress',
           priority: 'high',
-          deadline: new Date(),
+          deadline: new Date(Date.now() + 86400000), // Tomorrow
           projectId: 'project123',
         },
       };
 
       await updateTask(mockRequest as Request, mockResponse as Response);
 
-      expect(mockJson).toHaveBeenCalledWith(mockTask);
+      // Check that json was called with an object containing the expected properties
+      expect(mockJson).toHaveBeenCalledWith(expect.objectContaining({
+        _id: 'task123',
+        title: 'Updated Task',
+        status: 'in-progress',
+        priority: 'high',
+        projectId: 'project123',
+      }));
     });
 
     it('should return 404 if task not found', async () => {

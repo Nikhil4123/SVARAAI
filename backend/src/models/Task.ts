@@ -2,10 +2,14 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITask extends Document {
   title: string;
+  description: string;
   status: 'todo' | 'in-progress' | 'done';
   priority: 'low' | 'medium' | 'high';
   deadline: Date;
   projectId: mongoose.Types.ObjectId;
+  assignee?: mongoose.Types.ObjectId; // Optional assignee field
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const TaskSchema: Schema = new Schema({
@@ -13,6 +17,10 @@ const TaskSchema: Schema = new Schema({
     type: String,
     required: true,
     trim: true
+  },
+  description: {
+    type: String,
+    default: ''
   },
   status: {
     type: String,
@@ -32,6 +40,11 @@ const TaskSchema: Schema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Project',
     required: true
+  },
+  assignee: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
 }, {
   timestamps: true

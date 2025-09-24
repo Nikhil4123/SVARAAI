@@ -1,16 +1,14 @@
 {
-  "devDependencies": {
-    "@types/bcryptjs": "^3.0.0",
-    "@types/express": "^5.0.3",
-    "@types/jest": "^30.0.0",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/mongoose": "^5.11.97",
-    "@types/node": "^24.5.2",
-    "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+  "name": "svara-ai-task-manager-tests",
+  "version": "1.0.0",
+  "description": "Test scripts for SvaraAI Task Manager",
+  "main": "test-project-creation.js",
+  "scripts": {
+    "test-project": "node test-project-creation.js"
   },
   "dependencies": {
-    "node-fetch": "^3.3.2"
-  }
+    "node-fetch": "^2.6.1"
+  },
+  "author": "SvaraAI Developer",
+  "license": "MIT"
 }

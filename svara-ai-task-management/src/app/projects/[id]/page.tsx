@@ -7,10 +7,16 @@ import Link from 'next/link';
 interface Task {
   _id: string;
   title: string;
+  description?: string;
   status: 'todo' | 'in-progress' | 'done';
   priority: 'low' | 'medium' | 'high';
   deadline: string;
   projectId: string;
+  assignee?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
 }
 
 interface Project {
@@ -20,19 +26,30 @@ interface Project {
   createdAt: string;
 }
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+}
+
 export default function ProjectDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [selectedAssignee, setSelectedAssignee] = useState('');
   const [newTask, setNewTask] = useState({
     title: '',
+    description: '',
     status: 'todo' as 'todo' | 'in-progress' | 'done',
     priority: 'medium' as 'low' | 'medium' | 'high',
     deadline: '',
     projectId: params.id,
+    assignee: '',
   });
 
   useEffect(() => {
@@ -44,6 +61,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
 
     fetchProject();
     fetchTasks();
+    fetchUsers();
   }, [params.id]);
 
   const fetchProject = async () => {
@@ -84,6 +102,24 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
+
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -103,10 +139,12 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
         setTasks([...tasks, task]);
         setNewTask({
           title: '',
+          description: '',
           status: 'todo',
           priority: 'medium',
           deadline: '',
           projectId: params.id,
+          assignee: '',
         });
         setShowModal(false);
       }
@@ -156,14 +194,72 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     }
   };
 
+  const handleAssignTask = async (taskId: string, assigneeId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/assign`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ assignee: assigneeId }),
+      });
+
+      if (res.ok) {
+        const updatedTask = await res.json();
+        setTasks(tasks.map(task => task._id === taskId ? updatedTask : task));
+        setShowAssignModal(false);
+      }
+    } catch (error) {
+      console.error('Failed to assign task:', error);
+    }
+  };
+
+  const openAssignModal = (task: Task) => {
+    setCurrentTask(task);
+    setSelectedAssignee(task.assignee?._id || '');
+    setShowAssignModal(true);
+  };
+
+  const handleAssignSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (currentTask && selectedAssignee) {
+      handleAssignTask(currentTask._id, selectedAssignee);
+    }
+  };
+
+  const removeAssignee = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/tasks/${taskId}/assign`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ assignee: null }),
+      });
+
+      if (res.ok) {
+        const updatedTask = await res.json();
+        setTasks(tasks.map(task => task._id === taskId ? updatedTask : task));
+      }
+    } catch (error) {
+      console.error('Failed to remove assignee:', error);
+    }
+  };
+
   const openEditModal = (task: Task) => {
     setCurrentTask(task);
     setNewTask({
       title: task.title,
+      description: task.description || '',
       status: task.status,
       priority: task.priority,
       deadline: task.deadline,
       projectId: task.projectId,
+      assignee: task.assignee?._id || '',
     });
     setShowModal(true);
   };
@@ -172,10 +268,12 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
     setCurrentTask(null);
     setNewTask({
       title: '',
+      description: '',
       status: 'todo',
       priority: 'medium',
       deadline: '',
       projectId: params.id,
+      assignee: '',
     });
     setShowModal(true);
   };
@@ -268,6 +366,14 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                         <h5 className="font-medium text-gray-900">{task.title}</h5>
                         <div className="flex space-x-2">
                           <button 
+                            onClick={() => openAssignModal(task)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </button>
+                          <button 
                             onClick={() => openEditModal(task)}
                             className="text-gray-500 hover:text-gray-700"
                           >
@@ -293,6 +399,17 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                           Due: {new Date(task.deadline).toLocaleDateString()}
                         </span>
                       </div>
+                      {task.assignee && (
+                        <div className="mt-2 flex items-center text-xs text-gray-500">
+                          <span>Assigned to: {task.assignee.name}</span>
+                          <button 
+                            onClick={() => removeAssignee(task._id)}
+                            className="ml-2 text-red-500 hover:text-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
                       <div className="mt-3 flex space-x-2">
                         <button
                           onClick={() => handleUpdateTask(task._id, 'in-progress')}
@@ -321,6 +438,14 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                         <h5 className="font-medium text-gray-900">{task.title}</h5>
                         <div className="flex space-x-2">
                           <button 
+                            onClick={() => openAssignModal(task)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </button>
+                          <button 
                             onClick={() => openEditModal(task)}
                             className="text-gray-500 hover:text-gray-700"
                           >
@@ -346,6 +471,17 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                           Due: {new Date(task.deadline).toLocaleDateString()}
                         </span>
                       </div>
+                      {task.assignee && (
+                        <div className="mt-2 flex items-center text-xs text-gray-500">
+                          <span>Assigned to: {task.assignee.name}</span>
+                          <button 
+                            onClick={() => removeAssignee(task._id)}
+                            className="ml-2 text-red-500 hover:text-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
                       <div className="mt-3 flex space-x-2">
                         <button
                           onClick={() => handleUpdateTask(task._id, 'todo')}
@@ -380,6 +516,14 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                         <h5 className="font-medium text-gray-900">{task.title}</h5>
                         <div className="flex space-x-2">
                           <button 
+                            onClick={() => openAssignModal(task)}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </button>
+                          <button 
                             onClick={() => openEditModal(task)}
                             className="text-gray-500 hover:text-gray-700"
                           >
@@ -405,6 +549,17 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                           Due: {new Date(task.deadline).toLocaleDateString()}
                         </span>
                       </div>
+                      {task.assignee && (
+                        <div className="mt-2 flex items-center text-xs text-gray-500">
+                          <span>Assigned to: {task.assignee.name}</span>
+                          <button 
+                            onClick={() => removeAssignee(task._id)}
+                            className="ml-2 text-red-500 hover:text-red-700"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
                       <div className="mt-3 flex space-x-2">
                         <button
                           onClick={() => handleUpdateTask(task._id, 'in-progress')}
@@ -455,6 +610,18 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                           />
                         </div>
                         <div className="mb-4">
+                          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                            Description
+                          </label>
+                          <textarea
+                            id="description"
+                            rows={3}
+                            value={newTask.description}
+                            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          ></textarea>
+                        </div>
+                        <div className="mb-4">
                           <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
                             Priority
                           </label>
@@ -482,6 +649,24 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                             required
                           />
                         </div>
+                        <div className="mb-4">
+                          <label htmlFor="assignee" className="block text-sm font-medium text-gray-700">
+                            Assignee
+                          </label>
+                          <select
+                            id="assignee"
+                            value={newTask.assignee}
+                            onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          >
+                            <option value="">Unassigned</option>
+                            {users.map(user => (
+                              <option key={user._id} value={user._id}>
+                                {user.name} ({user.email})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </form>
                     </div>
                   </div>
@@ -498,6 +683,69 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Task Modal */}
+      {showAssignModal && (
+        <div className="fixed z-10 inset-0 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Assign Task
+                    </h3>
+                    <div className="mt-2">
+                      <form onSubmit={handleAssignSubmit}>
+                        <div className="mb-4">
+                          <label htmlFor="assignee" className="block text-sm font-medium text-gray-700">
+                            Assign to
+                          </label>
+                          <select
+                            id="assignee"
+                            value={selectedAssignee}
+                            onChange={(e) => setSelectedAssignee(e.target.value)}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                          >
+                            <option value="">Unassigned</option>
+                            {users.map(user => (
+                              <option key={user._id} value={user._id}>
+                                {user.name} ({user.email})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleAssignSubmit}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Assign
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignModal(false)}
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Cancel
